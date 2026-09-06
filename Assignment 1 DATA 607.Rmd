@@ -1,0 +1,188 @@
+---
+title: "DATA 607 Assignment 1"
+author: "Marcin K"
+date: "2026-09-06"
+output: pdf_document
+---
+
+## Loading Data into a Data Frame
+
+## Introduction & Approach
+
+The data source for the assignment will be from Kaggle: (https://www.kaggle.com/datasets/abcsds/pokemon?resource=download)
+The dataset in the link above contains 800 Pokemon tabulated in spreasheet format. There are two columns that list Pokemon attributes.
+For example, the Pokemon Bulbasaur has an attribute 'Grass' from column Type.1 and an attribute of 'Poisonous' from column Type.2. 
+
+The attributes of 'Grass' and 'Poisonous' are fully spelled out already. In the spirit of the assignment, these attributes will be first transformed 
+into shortened notation (ex. 'g' for Grass type Pokemon) and then back again to their full names. 
+
+This is comparable to what is shown in the UCI mushroom dataset (https://archive.ics.uci.edu/dataset/73/mushroom).
+
+## Note to Darwhin / Program User. 
+
+For this program to function as intended, the dataset must first be downloaded from Kaggle (see source above). The file must be unzipped and saved 
+onto your computer. 
+
+## Body - Part 1
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse) #user will need the tinyverse package installed
+```
+
+```{r eval = TRUE}
+my_file_path <- file.choose()
+data <- read.csv(my_file_path)
+```
+```{r eval = FALSE}
+#The code written below does not to be executed. It was helpful in verifying that the program works correctly. 
+print(my_file_path)
+glimpse(data)
+data <- read.csv("C:/Users/User/Desktop/Pokemon.csv").
+```
+
+## Body - Part 2
+
+We can use the unique() function to find the unique attributes for all Pokemon in the dataset in both Column 1 and Column 2.
+The function below should return 18 unique attributes. The attributes between column 1 and column 2 are shared. 
+
+```{r eval = TRUE}
+Unique_Type_1 <- unique(data$Type.1)
+print(Unique_Type_1)
+Unique_Type_2 <- unique(data$Type.2)
+print(Unique_Type_2)
+```
+```{r eval = FALSE}
+
+```
+
+## Body - Part 3
+
+The Tidyverse package is installed, we can use the str_replace_all() function to replace each attribute with an abbreviation.
+
+Syntax: str_replace_all(dataframe$column, "old", "new")
+str_replace_all(string, pattern, replacement) Source: https://www.rdocumentation.org/packages/stringr/versions/0.6.2/topics/str_replace_all
+
+```{r eval = TRUE}
+data$Type.1 <- str_replace_all(data$Type.1, "Grass", "g")        #1
+data$Type.1 <- str_replace_all(data$Type.1, "Fire", "f")         #2
+data$Type.1 <- str_replace_all(data$Type.1, "Water", "w")        #3
+data$Type.1 <- str_replace_all(data$Type.1, "Bug", "b")          #4
+data$Type.1 <- str_replace_all(data$Type.1, "Normal", "n")       #5
+data$Type.1 <- str_replace_all(data$Type.1, "Poison", "p")       #6
+data$Type.1 <- str_replace_all(data$Type.1, "Electric", "e")     #7
+data$Type.1 <- str_replace_all(data$Type.1, "Ground", "gr")      #8
+data$Type.1 <- str_replace_all(data$Type.1, "Fairy", "fy")       #9
+data$Type.1 <- str_replace_all(data$Type.1, "Fighting", "fi")    #10
+data$Type.1 <- str_replace_all(data$Type.1, "Psychic", "ps")     #11
+data$Type.1 <- str_replace_all(data$Type.1, "Rock", "r")         #12
+data$Type.1 <- str_replace_all(data$Type.1, "Ghost", "gh")       #13
+data$Type.1 <- str_replace_all(data$Type.1, "Ice", "i")          #14
+data$Type.1 <- str_replace_all(data$Type.1, "Dragon", "dr")      #15
+data$Type.1 <- str_replace_all(data$Type.1, "Dark", "dk")        #16
+data$Type.1 <- str_replace_all(data$Type.1, "Steel", "st")       #17
+data$Type.1 <- str_replace_all(data$Type.1, "Flying", "fl")      #18
+
+#Now repeat this for the second column of attributes
+
+data$Type.2 <- str_replace_all(data$Type.2, "Grass", "g")
+data$Type.2 <- str_replace_all(data$Type.2, "Fire", "f")
+data$Type.2 <- str_replace_all(data$Type.2, "Water", "w")
+data$Type.2 <- str_replace_all(data$Type.2, "Bug", "b")
+data$Type.2 <- str_replace_all(data$Type.2, "Normal", "n")
+data$Type.2 <- str_replace_all(data$Type.2, "Poison", "p")
+data$Type.2 <- str_replace_all(data$Type.2, "Electric", "e")
+data$Type.2 <- str_replace_all(data$Type.2, "Ground", "gr")
+data$Type.2 <- str_replace_all(data$Type.2, "Fairy", "fy")
+data$Type.2 <- str_replace_all(data$Type.2, "Fighting", "fi")
+data$Type.2 <- str_replace_all(data$Type.2, "Psychic", "ps")
+data$Type.2 <- str_replace_all(data$Type.2, "Rock", "r")
+data$Type.2 <- str_replace_all(data$Type.2, "Ghost", "gh")
+data$Type.2 <- str_replace_all(data$Type.2, "Ice", "i")
+data$Type.2 <- str_replace_all(data$Type.2, "Dragon", "dr")
+data$Type.2 <- str_replace_all(data$Type.2, "Dark", "dk")
+data$Type.2 <- str_replace_all(data$Type.2, "Steel", "st")
+data$Type.2 <- str_replace_all(data$Type.2, "Flying", "fl")
+
+```
+```{r eval = FALSE}
+#The code written below does not to be executed. It was helpful in verifying that the program works correctly. 
+data$Type.1
+data$Type.2
+```
+
+## Body - Part 4
+
+In this section we want to reverse the transformation, and convert the data in Columns 1 and 2 from abbreviations back to fully named attributes. 
+Running the function str_replace_all() sequentially for each abbreviations led to string collisions. The approach needed to be modified so Gemini was consulted for assistance. 
+Gemini: For example, replacing "g" with "Grass" creates occurrences of letters like "r" and "a", which subsequent lines (such as replacing "r" with "Rock") will unintentionally match and replace inside the word "Grass".
+
+## Citation
+
+Google Gemini. (2026). Gemini 3.8 Flash. [Large language model].
+[https://gemini.google.com/.] Accessed Sept. 5, 2026
+
+Upon further reading, it appears the str_replace_all() can accept a named vector dictionary instead of an individual string 
+Source: https://r-statistics.co/stringr-str_replace_all-in-R.html
+
+First step will be to generate the vector dictionary using the concatenate c() function. 
+
+```{r eval = FALSE}
+vect_dic <- c(
+  "g"  = "Grass",    "f"  = "Fire",     "w"  = "Water",
+  "b"  = "Bug",      "n"  = "Normal",   "p"  = "Poison",
+  "e"  = "Electric", "gr" = "Ground",   "fy" = "Fairy",
+  "fi" = "Fighting", "ps" = "Psychic",  "r"  = "Rock",
+  "gh" = "Ghost",    "i"  = "Ice",      "dr" = "Dragon",
+  "dk" = "Dark",     "st" = "Steel",    "fl" = "Flying"
+)
+```
+```{r eval = FALSE}
+#The code written below does not to be executed. It was helpful in verifying that the program works correctly. 
+glimpse(vect_dic)
+```
+
+## Body - Part 5
+
+We learned that following method does not work and leads to string collisions. 
+data$Type.1 <- str_replace_all(data$Type.1, vect_dic)
+
+Found the documentation here in Rdocumentation insufficient to explain why this occurs: https://www.rdocumentation.org/packages/stringr/versions/0.6.2/topics/str_replace_all
+
+Google search states the following: The str_replace_all() function from the R package stringr is used to replace every single occurrence of a pattern within a text string or a vector of strings. [1] (https://r-statistics.co/stringr-str_replace_all-in-R.html), [2] (https://r-statistics.co/stringr-str_replace-in-R.html)
+
+Additional search led us to the following information. We can use the \\b boundary to define the start and end point of each string, so that abbreviation replacement does not result in string collisions. 
+R for Data Science, 2nd Ed. Chap. 15.6
+
+```{r eval = TRUE}
+vect_dic <- c(
+  "\\bg\\b"  = "Grass",    "\\bf\\b"  = "Fire",     "\\bw\\b"  = "Water",
+  "\\bb\\b"  = "Bug",      "\\bn\\b"  = "Normal",   "\\bp\\b"  = "Poison",
+  "\\be\\b"  = "Electric", "\\bgr\\b" = "Ground",   "\\bfy\\b" = "Fairy",
+  "\\bfi\\b" = "Fighting", "\\bps\\b" = "Psychic",  "\\br\\b"  = "Rock",
+  "\\bgh\\b" = "Ghost",    "\\bi\\b"  = "Ice",      "\\bdr\\b" = "Dragon",
+  "\\bdk\\b" = "Dark",     "\\bst\\b" = "Steel",    "\\bfl\\b" = "Flying"
+)
+data$Type.1 <- str_replace_all(data$Type.1, vect_dic)
+data$Type.2 <- str_replace_all(data$Type.2, vect_dic)
+```
+```{r eval = FALSE}
+#The code written below does not to be executed. It was helpful in verifying that the program works correctly. 
+#Visual verification that this worked correctly. 
+data$Type.1
+data$Type.2
+glimpse(data)
+```
+
+## Conclusion
+
+This was a relatively straightforward exercise. I could rewrite the Body Part 3 to function as a vector dictionary but it functions as-is and it shows the work that was done. While searching the internet, the Google search recommended other R functions that I tried out. 
+
+Some of them did not work based on the recommendation, whereas others worked (for example,the case_match() function) but I felt that I did not have a good enough understanding of why it worked to justify it as a solution to the problem. 
+
+Additional follow up reading from this could be to understand why the case_match() function was effective in the same way as using \\b boundaries. 
+Is the case_match() function more powerful and can it handle other, more complex types of data transformation. 
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
