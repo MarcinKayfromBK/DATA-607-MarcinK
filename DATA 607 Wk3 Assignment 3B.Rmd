@@ -1,0 +1,257 @@
+---
+title: "DATA 607 Assignment 3B"
+author: "Marcin K"
+date: "2026-09-17"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# ------------------ DATA 607 Assignment 3B ----------------------------------
+
+# Window Functions
+
+# Find (or ask an LLM to generate!) a dataset that includes time series for two or more separate items.  For example, you could use end of day stock or cryptocurrency prices since Jan 1, 2022 for several instruments.
+# Use window functions (in SQL or dplyr) to calculate the year-to-date average and the six-day moving averages for each item.
+# You may work in a small team on this assignment.  
+
+# ----------------------- Approach 9/17/26 -----------------------------------
+
+# Here is my current plan to tackle this assignment. 
+
+# I am going to use the NYC Rat Sightings dataset from Kaggle: 
+# See this link: https://www.kaggle.com/datasets/new-york-city/nyc-rat-sightings
+
+# This dataset satisfies the assignment because it has timestamps of rat sightings. It can be aggregated by "sightings per day" for example, to calculate a six day moving average. There are multiple additional categories to the data, inc. borough, zip code, location type of sighting, etc. and the moving average can be viewed in many different ways (ex. by borough) vs. (ex. by location type, on the street or in a dwelling).
+
+Context:
+Rats in New York City are prevalent, as in many densely populated areas. For a long time, the exact number of rats in New York City was unknown, and a common urban legend was that there were up to four times as many rats as people. In 2014, however, scientists more accurately measured the entire city's rat population to be approximately only 25% of the number of humans; i.e., there were approximately 2 million rats to New York's 8.4 million people at the time of the study.[1][2]
+
+Content:
+New York City rodent complaints can be made online, or by dialing 3-1-1, and the New York City guide Preventing Rats on Your Property discusses how the New York City Health Department inspects private and public properties for rats. Property owners that fail inspections receive a Commissioner's Order and have five days to correct the problem. If after five days the property fails a second inspection, the owner receives a Notice of Violation and can be fined. The property owner is billed for any clean-up or extermination carried out by the Health Department.
+
+Data is from 2010-Sept 16th, 2017 and includes date, location (lat/lon), type of structure, borough, and community board.
+
+Acknowledgements:
+Data was produced by the City of New York via their 311 portal.
+
+
+# Here is a good resource for Window Functions:
+# https://dplyr.tidyverse.org/articles/window-functions.html
+
+# I am going to use the dplyr package for this assignment. 
+# After importing the dataset, I will write a new column to the table and aggregate sightings by day. 
+# The next step will be to use the mean function to calculate the overall average sightings. 
+# Finally, I will need to read on how to implement a Window Function on how to complete a moving average calculation and write that data to a new datframe. 
+# With the new data frame, I will plot the data using ggplot2. 
+
+```{r libs, include=TRUE}
+library(tidyverse)      # data manipulation and visualization
+library(lubridate)      # easily work with dates and times
+library(zoo)            # working with time series data
+
+```
+
+```{r intro, include=TRUE}
+# Let's load the file "Rat_Sightings.csv" directly from the desktop
+my_file_path <- file.choose()
+ratsnyc <- read.csv(my_file_path) #dataframe named ratsnyc
+glimpse(ratsnyc) #check that it loaded correctly
+
+class(ratsnyc$Created.Date)
+# Columns created date and closed data are have been imported as <chr> data
+
+# Convert Column 2 "Date Created" to <dttm> from <chr>
+# originally we had this is mdy_hms but I recognize that the hms data is not valuable for the context of this assignment. 
+# Most of the import data is at 12:00:00 midnight
+ratsnyc <- ratsnyc %>% mutate(CREATED_DATE2 = mdy_hms(Created.Date))
+
+# "POSIXct" "POSIXt" - Date Class
+class(ratsnyc$CREATED_DATE2)
+
+ # ratsnyc$CREATED_DATE2 - just to take a peek
+
+# Most of the import data is at 12:00:00 midnight, but there are a few values with other times as well. Viewing the first 1000 entries, visually checking it appears that <5% of that data has a time factor other than 12:00:00
+
+ratsnyc <- ratsnyc %>% mutate(CREATED_DATE3 = round_date(CREATED_DATE2, unit = "days", week_start = getOption("lubridate.week.start", 7)))
+
+# ratsnyc$CREATED_DATE3 --- shows that the conversion was successful.
+
+
+```
+```{r main1, include=TRUE}
+# Let's count the number of rat sightings per day
+
+ratsnyc2 <- ratsnyc %>% count(CREATED_DATE3)
+
+colnames(ratsnyc2)
+
+# n is the number of reported sightings per day
+
+ratsnyc2 %>% summarise(
+  mean_rats = mean(n),
+  median_rats = median(n),
+  sd_rats = sd(n),
+  max_rats = max(n),
+  min_rats = min(n)
+)
+
+# The function shows that mean and median closely align, so I would expect a normal distribution to the data. 
+
+# Average for the data_set is 36.2 rat sightings per day in NYC. 
+
+# Using the rollmean function from the zoo library, I'll calculate the rolling average. Not that "left" below means it is the 6 next sequential values, x, x+1 x+2, x+3.... x+5. 
+
+ratsnyc2 <- ratsnyc2 %>% mutate(rm_rats = rollmean(n, 6, fill = NA, align = "left"))
+
+ggplot(data = ratsnyc2, mapping = aes(x = CREATED_DATE3, y = rm_rats)) + geom_line()
+
+# Warning: Removed 5 rows containing missing values or values outside the scale range. I understand this to mean that the last five values are empty in rm_rats, which makes sense with the rolling mean. I'm going to proceed and ignore this error as it is 5 data points out of 2482. 
+
+# What's intersting is that the trend is going upward. There were more rat sightings in the latter half of the decade. It may indicate the population was increasing, or it may indicate that the reporting increased. Could potentially be due to the increased prevalence of smartphones in the latter half of the 2010's.
+
+# The data clearly shows a peak in rat sightings reporting for each summer season and a trough in the winter.
+```
+
+``
+```{r main2, include=TRUE}
+# Let's repeat this exercise but now let's do this by borough. 
+
+unique(ratsnyc$Borough)
+
+# We are going to ignore data for the when the Borough is unspecified. 
+
+rats_BK <- filter(ratsnyc, Borough == "MANHATTAN") %>%count(CREATED_DATE3)
+rats_MH <- filter(ratsnyc, Borough == "BROOKLYN") %>% count(CREATED_DATE3)
+rats_BX <- filter(ratsnyc, Borough == "BRONX") %>%  count(CREATED_DATE3)
+rats_SI <- filter(ratsnyc, Borough == "STATEN ISLAND") %>% count(CREATED_DATE3)
+rats_QN <- filter(ratsnyc, Borough == "QUEENS") %>% count(CREATED_DATE3)
+
+# Now we have 5 data frames for each borough
+
+rats_BK %>% summarise(
+  mean_BK = mean(n),
+)
+
+rats_MH %>% summarise(
+  mean_MH = mean(n),
+)
+
+rats_BX %>% summarise(
+  mean_BX = mean(n),
+)
+
+rats_SI %>% summarise(
+  mean_SI = mean(n),
+)
+
+rats_QN %>% summarise(
+  mean_QN = mean(n),
+)
+
+# Means are 9.6, 12.4, 7.5, 2.5, 5.5
+
+rats_BK <- rats_BK %>% mutate(rm_rats_BK = rollmean(n, 6, fill = NA, align = "left"))
+
+rats_MH <- rats_MH %>% mutate(rm_rats_MH = rollmean(n, 6, fill = NA, align = "left"))
+
+rats_BX <- rats_BX %>% mutate(rm_rats_BX = rollmean(n, 6, fill = NA, align = "left"))
+
+rats_SI <- rats_SI %>% mutate(rm_rats_SI = rollmean(n, 6, fill = NA, align = "left"))
+
+rats_QN <- rats_QN %>% mutate(rm_rats_QN = rollmean(n, 6, fill = NA, align = "left"))
+
+#Time to create a new dataframe for plotting. 
+
+# Let's find the last date in the original dataset. 
+
+ratsnyc %>% summarise(
+  max_date = max(CREATED_DATE3),
+)
+
+# Data ends September 16 2017, let's map until the 17th
+
+# AI Usage Citation. ChatGPT model GPT-5.5, accessed to prompt ChatGPT how to join multiple data frames when the data range was a <dttm> value across the first column across a specified time period. 
+
+rats_total <- data.frame(
+  Date = seq(
+    from = as.Date("2010-01-01"),
+    to = as.Date("2017-09-17"),
+    by = "day"
+  )
+)
+
+rats_total <- rats_total %>%
+  left_join(
+    rats_BK %>% select(CREATED_DATE3, rm_rats_BK),
+    by = c("Date" = "CREATED_DATE3")
+  ) %>%
+  left_join(
+    rats_MH %>% select(CREATED_DATE3, rm_rats_MH),
+    by = c("Date" = "CREATED_DATE3")
+  ) %>%
+  left_join(
+    rats_BX %>% select(CREATED_DATE3, rm_rats_BX),
+    by = c("Date" = "CREATED_DATE3")
+  ) %>%
+  left_join(
+    rats_SI %>% select(CREATED_DATE3, rm_rats_SI),
+    by = c("Date" = "CREATED_DATE3")
+  ) %>%
+  left_join(
+    rats_QN %>% select(CREATED_DATE3, rm_rats_QN),
+    by = c("Date" = "CREATED_DATE3")
+  )
+
+# Now there is a dataframe combining the 6 day rolling mean of the rat population across the five boroughs. 
+
+# Let's plot the rolling mean of all five boroughs
+
+ggplot(rats_total, aes(x = Date)) +
+  geom_line(aes(y = rm_rats_BK, color = "BK")) +
+  geom_line(aes(y = rm_rats_MH, color = "MH")) +
+  geom_line(aes(y = rm_rats_BX, color = "BX")) +
+  geom_line(aes(y = rm_rats_SI, color = "SI")) +
+  geom_line(aes(y = rm_rats_QN, color = "QN"))
+
+```
+# --------------------------------------------------------
+# ---- CONCLUSION ----
+# --------------------------------------------------------
+
+This assignment was a good challenge. 
+
+The mean for all of NYC rat sightings reported was 36.2 rat sightings per day reported with clear peaks in the summer and clear troughs in the winter. 
+
+The mean for each of the five Boroughs:
+Brooklyn - 9.6 reported rat sightings per day
+Manhattan - 12.4 reported rat sightings per day
+Bronx - 7.5 reported rat sightings per day
+Staten Island - 2.5 reported rat sightings per day
+Queens - 5.5 reported rat sightings per day
+
+A good follow up to this exercise would be to find out why the reported sightings were increasing from 2010 to 2017. It appears the increase exists across all boroughs except Staten Island. 
+
+If I were to redo the graph showing the data superimposed for the rolling average for each of the five boroughs, I would continue iterating the time period for the rolling average. I think a rolling average of 15 days, for example, woudl look cleaner in the final plot and make it easier to distinguish between each of the five boroughs. 
+
+# --------------------------------------------------------
+# ---- SOURCES ----
+# --------------------------------------------------------
+
+
+https://uc-r.github.io/ts_moving_averages
+
+https://www.rdocumentation.org/packages/zoo/versions/1.9-0/topics/rollmean
+
+R for Data Science (2e) - Chapter 17
+
+https://lubridate.tidyverse.org/reference/round_date.html
+
+https://readr.tidyverse.org/reference/parse_datetime.html
+
+https://lubridate.tidyverse.org/articles/lubridate.html#setting-and-extracting-information
