@@ -1,0 +1,205 @@
+---
+title: "DATA 607 Assignment 3A"
+author: "Marcin K"
+date: "2026-09-17"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# -----------------------------
+# --- DATA 607 Assignment 3A 
+# -----------------------------
+
+# Global Baseline Estimates
+
+Using the information you collected on movie ratings, implement a Global Baseline Estimate recommendation system in R. The attached spreadsheet provides the implementation algorithm.
+
+Most recommender systems use personalized algorithms like “content management” and “item-item collaborative filtering.” Sometimes non-personalized recommenders are also useful or necessary. One of the best non-personalized recommender system algorithms is the “Global Baseline Estimate.
+
+The job here is to use the survey data collected and write the R code that makes a movie recommendation using the Global Baseline Estimate algorithm.  Please see the attached spreadsheet for implementation details.
+
+Movie Ratings XLSX
+
+# -----------------------------
+# --- Approach 9/17/26 
+# -----------------------------
+
+Here is my current plan to tackle this assignment. 
+
+The Global Baseline Estimate (GBE) system is a core building block in recommendation engines and collaborative filtering. It predicts missing ratings by combining the global average rating (μ), the specific user bias (bu), and the specific item bias (bi). 
+
+My approach will be to improve my original dataset. There are many Null values, and for the exercise to yield better recommendations I would like to expand the number of responses and reduce the relative percent of null responses.
+
+
+After loading the data into R as a datframe, the next step will be to find the three following values: global average rating (μ), the specific user bias (bu), and the specific item bias (bi). I will store these new values in a new dataframe.  
+
+The formula for the recommendation based on GBE: 
+r = (μ) + (bu) + (bi). 
+
+I will create a new dataframe of the original users with their actual ratings combined with the predicted ratings. I will round the predicted rating to the closest integer on a scale of 1-5. I way use an identifier (ex. asterisk) to separate recommended values from true ratings so that it is easy to distinguish between the two in the final exported table. 
+
+Here are some helpful resources I  found that I may use: 
+
+recommenderlab: An R Framework for Developing and Testing Recommendation Algorithms (https://cran.r-project.org/web/packages/recommenderlab/vignettes/recommenderlab.pdf)
+Recommendation Systems (http://infolab.stanford.edu/~ullman/mmds/ch9.pdf)
+
+# -----------------------------
+# --- Assignment Details 
+# -----------------------------
+
+```{r setup_library, include=TRUE}
+
+library(tidyverse)
+library(DBI)
+library(RPostgres)
+```
+
+To begin, this assignment, I imported the data from the previous assignment 2A directly from PostgreSQL. The movie scores were updated with additional scores from reviewers prior to upload into R. 
+
+```{r main1, include=TRUE}
+
+database_connection <- dbConnect(
+  RPostgres::Postgres(),
+  dbname = "postgres",
+  host   = "localhost",  
+  port   = 5432,
+  user   = "postgres",
+  password = rstudioapi::askForPassword("Enter Database Password") 
+)
+
+# Run a SQL query to get the results
+query <- "SELECT id, first_name, last_name, Obsession, 
+The_Odyssey, F1, Wicked_For_Good, Spider_Man_BND, Project_Hail_Mary
+FROM movie_reviews;"
+
+R_movie_reviews <- dbGetQuery(database_connection, query)
+
+```
+
+# -----------------------------
+# --- Global Average Calculation
+# -----------------------------
+
+To calculate the global average the sum score was taken for each movie and assigned to a variable. The sum of those totals was taken and then divided by the number of ratings.
+
+```{r main2, include=TRUE}
+
+GAC <- R_movie_reviews %>% select(where(is.numeric)) %>% as.matrix() %>% mean(na.rm = TRUE)
+
+GAC # this is the global mean
+
+```
+# -----------------------------
+# --- Rating Matrix with Numeric Values Only
+# -----------------------------
+
+```{r main3, include=TRUE}
+
+reviewers <- R_movie_reviews$last_name
+
+# Extract only rating columns (excluding 'id' and character columns)
+ratings_matrix <- R_movie_reviews %>%
+  select(where(is.numeric), -any_of("id")) %>%
+  as.matrix()
+
+rownames(ratings_matrix) <- reviewers
+
+```
+
+# -----------------------------
+# --- Reviewer Average & Bias
+# -----------------------------
+
+In order to calculate the specific user bias (bu), the individual average of the movie reviewer ratings must first be determined. Then Subtract GAC. 
+
+```{r main4, include=TRUE}
+
+reviewer_avg <- rowMeans(ratings_matrix, na.rm = TRUE)
+reviewer_bias <- reviewer_avg - GAC
+
+tibble(
+  Reviewer = reviewers,
+  Average = round(reviewer_avg, 1),
+  Reviwer_Bias = round(reviewer_bias, 1)
+)
+
+```
+# -----------------------------
+# --- Movie Average & Bias
+# -----------------------------
+
+In order to calculate the specific item bias (bi), the movie averages need to be calculated. Then subtract GAC for bias. 
+
+```{r main5, include=TRUE}
+
+
+movie_avg <- colMeans(ratings_matrix, na.rm = TRUE)
+movie_bias <- movie_avg - GAC
+
+tibble(
+  Movie = colnames(ratings_matrix),
+  Average = round(movie_avg, 1),
+  Movie_Bias = round(movie_bias, 1)
+)
+```
+
+# -----------------------------
+# --- Rating Predictions
+# -----------------------------
+
+
+
+```{r main6, include=TRUE}
+
+# Outer sum: (User Bias + Movie Bias across a 5x6 matrix) + Global Average
+# Outer() function https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/outer
+
+predicted_matrix <- outer(reviewer_bias, movie_bias, "+") + GAC
+
+# Output table
+OG_rating_plus_pred <- ratings_matrix
+
+for (i in 1:nrow(OG_rating_plus_pred)) {
+  for (j in 1:ncol(OG_rating_plus_pred)) {
+    if (is.na(OG_rating_plus_pred[i, j])) {
+      # Replace missing value with prediction
+      OG_rating_plus_pred[i, j] <- predicted_matrix[i, j]
+    } 
+  }
+}
+
+# Bind reviewer names back to table
+OG_rating_plus_pred <- bind_cols(
+  Reviewer = reviewers,
+  as_tibble(OG_rating_plus_pred)
+)
+
+OG_rating_plus_pred
+```
+
+# -----------------------------
+# --- Conclusion
+# -----------------------------
+
+The Global Baseline Estimate algorithm was an excellent approach to generate a matrix of predicted values. The approach allows an unlimited number of predicted values to be called upon when needed. Using a for loop allowed us to cycle through all of the missing "NA" values and replace them with predicted values. Having the two matrices line up position by position is a clever approach. This approach generates a significant amount of unused data in the predicted matrix, next I would investigate a method to call only the necessary values when needed in teh for loop to generate them on the spot. 
+
+# -----------------------------
+# --- Sources & Citations
+# -----------------------------
+
+Susanna Wong --- https://rpubs.com/sussing/1033794
+
+Lionel jr. desroses --- https://rpubs.com/lionlejr17/L607LAB3A
+
+Source for For Loop explanation --- https://stackoverflow.com/questions/67075477/replacing-na-values-in-a-data-frame-with-the-median-using-a-for-loop
+
+Gemini 3.8 Flash used to correct the initial approach I was taking which was erroneous. Gemini was used to help debug / correct errors. 
+
+
+
