@@ -1,0 +1,213 @@
+---
+title: "DATA 607 Assignment 05A CodeBase"
+author: "Marcin K"
+date: "2026-10-01"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# ----------------------------
+# ---- Part 1
+# ----------------------------
+
+(1) Create a .CSV file (or optionally, a MySQL database!) that includes all of the information above. You’re encouraged to use a “wide” structure similar to how the information appears above, so that you can practice tidying and transformations as described below
+
+Transformed data from wide to long format. (+10)
+
+# ----------------------------
+
+1. Created a .csv file in the exact same format as the assignment. 
+
+```{r chunk1, include=TRUE}
+
+library(tidyverse)
+library(scales)
+library(knitr)
+
+data_path <- file.choose()
+
+data <- read_csv(data_path)
+
+```
+```{r chunk2, include=TRUE}
+
+data2 <- data %>% pivot_longer(
+    cols = !c(1, 2),
+    names_to = "Cities",
+    values_to = "Arrivals"
+)
+
+data2[6:10,1] <- "ALASKA"
+data2[21:25,1] <- "AM WEST"
+colnames(data2)[1:2] <- c("Airline","Status")
+
+data3 <- filter(data2, !is.na(Airline))
+
+data3 %>% print(n=20)
+
+```
+# ----------------------------
+# ----  Part 2
+# ----------------------------
+
+(2) Read the information from your .CSV file into R, and use tidyr and dplyr as needed to tidy and transform your data
+
+Submitted data file with at least some count analysis (+45)
+
+Recreated File in Same Format as given, including missing data where there were empty cells in source data. (+5)
+
+Provided code to populate missing data. (+5)
+
+# ----------------------------
+
+The section shows what I assume are either  on-time or delayed arrivals/departures at five U.S. airports from carriers Alaska and AM West (now part of American Airlines). For the sake of this assignment, we will assume they are arrivals. 
+
+```{r chunk3, include=TRUE}
+
+# Chunk 3 satisfies the count portion of the assignment.
+
+AL_ontime <- data3 %>% filter(Status == "on time" & Airline == "ALASKA") %>% pull(Arrivals) %>% sum()
+
+AMW_ontime <- data3 %>% filter(Status == "on time" & Airline == "AM WEST") %>% pull(Arrivals) %>% sum()
+
+AL_delay <- data3 %>% filter(Status == "delayed" & Airline == "ALASKA") %>% pull(Arrivals) %>% sum()
+
+AMW_delay <- data3 %>% filter(Status == "delayed" & Airline == "AM WEST") %>% pull(Arrivals) %>% sum()
+
+AL_total <- data3 %>% filter(Airline == "ALASKA") %>% pull(Arrivals) %>% sum()
+
+AMW_total <- data3 %>% filter(Airline == "AM WEST") %>% pull(Arrivals) %>% sum()
+
+print(paste0(
+  "Alaska Airlines saw an average delay percentage of ", 
+  percent(AL_delay / AL_total), 
+  " in flight arrivals whereas AM WEST saw a delay of ", 
+  percent(AMW_delay / AMW_total), 
+  " across all flights on the same five routes."
+))
+
+print(paste0(
+  "Alaska Airlines saw ", 
+  AL_delay, 
+  " delayed flights and ",
+  AL_ontime,
+  " on-time flights for a grand total of ",
+  AL_total,
+  " flights.",
+  "AM West saw ", 
+  AMW_delay, 
+  " delayed flights and ",
+  AMW_ontime,
+  " on-time flights for a grand total of ",
+  AMW_total,
+  " flights."
+))
+
+```
+```{r chunk4, include=TRUE}
+
+# Chunk 4 transforms the long dataframe back to a wide dataframe. 
+
+data4 <- data3 %>%
+  pivot_wider(
+    names_from = Cities,
+    values_from = Arrivals
+  )
+
+data4[2,1] <- ""
+data4[4,1] <- ""
+colnames(data4)[1:2] <- c("","")
+
+data4 <- data4 %>% add_row(.before = 3)
+
+data4
+
+```
+
+# ----------------------------
+# ---- Part 3
+# ----------------------------
+
+(3) Perform analysis to compare the arrival delays for the two airlines.
+
+Compared percentage (not just counts) of either delays or arrival rates for two airlines overall. [Either with a chart, or a table; both would be exemplary].  Include text summarizes findings from this comparison. (+10)
+
+Compared percentage (not just counts) of either delays or arrival rates for two airlines across five cities. [Either with a chart, or a table; both would be exemplary].  Include text summarizes findings from this comparison. (+10)
+
+Describe discrepancy between comparing two airlines’ flight performances city-by-city and overall. (+5)
+
+Explain discrepancy between comparing two airlines’ flight performances city-by-city and overall.(+5)
+
+# ----------------------------
+
+```{r chunk5, include=TRUE}
+
+
+# The following values were calculated in Chunk 3
+  
+# AL_ontime
+# AMW_ontime
+# AL_delay
+# AMW_delay
+# AL_total
+# AMW_total
+
+data5 <- data3 %>%
+  pivot_wider(
+    names_from = Status,
+    values_from = Arrivals
+  )
+
+data6 <- data5 %>% 
+  select(Airline, Cities)
+
+data5 <- data5 %>%
+  mutate(
+    Total = (delayed + `on time`)
+  )
+
+data6 <- data5 %>%
+  mutate(
+    On_Time_Percentage = percent(`on time` / (delayed + `on time`)),
+    Delayed_Percentage = percent(delayed / (delayed + `on time`))
+  ) %>%
+  select(Airline, Cities, On_Time_Percentage, Delayed_Percentage)
+
+kable(data5, caption = "Delayed & On Time Arrivals for Alaska & AM West Airlines", align = "c")
+
+kable(data6, caption = "Delayed & On Time Arrival Percentages for Alaska & AM West Airlines", align = "c")
+
+
+```
+
+# ----Summary & Conclusion -----
+
+AM West and Alaska Airlines both serve the Western United States, but from the arrival flight data it appears that their primary focus was on different cities. The majority of Alaska's flights were to Seattle (2146 arrivals) whereas AM West had the majority of arrivals in Phoenix (5255 arrivals). 
+
+Alaska Airlines saw an average delay percentage of 13% in flight arrivals whereas AM WEST saw a delay of 11% across all flights on the same five routes.
+
+Alaska Airlines saw 501 delayed flights and 3274 on-time flights for a grand total of 3775 flights.AM West saw 787 delayed flights and 6438 on-time flights for a grand total of 7225 flights.
+
+AM West was the only airline out of the two that had a delay percentage of total flights greater than 20% (in San Francisco and Seattle). However, these accounted for a smaller proportion of the overall number of flights so overall their performance was still better than Alaska airlines. 
+Alaska, meanwhile, saw a 14.2% delay on arrivals to Seattle but because Seattle accounted for over half of their arrivals, it reduced their overall performance and caused their overall on time percentage to be lower than AM West. 
+
+Both airlines saw their best performance in Phoenix, with a 5.1% delay percentage on arrivals for Alaska airlines and a 7.9% delay percentage for AM West.
+
+The pivot_wider() and pivot_longer() functions were helpful in organizing the data for analysis. The exercise clarified the importance of structuring the dataframe in a way that makes analysis efficient by permitting operations across vectors. 
+
+
+# ----------------------------
+# ---- Part 4
+# ----------------------------
+
+(4) Your code should be in an R Markdown file, posted to rpubs.com, and should include narrative descriptions of your data cleanup work, analysis, and conclusions. Please include in your homework submission:
+ The URL to the .Rmd file in your GitHub repository. and
+ The URL for your rpubs.com web page.
+
+
+
