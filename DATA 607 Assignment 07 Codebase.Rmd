@@ -1,0 +1,123 @@
+---
+title: "DATA 607 Assignment 07 Codebase"
+format: html
+editor: visual
+author: Marcin Kielkiewicz
+date:   October 20th, 2026
+---
+
+## Assignment: Working with HTML & JSON
+
+This is a warm up exercise to help you to get more familiar with the HTML and JSON file formats, and using packages to read these data formats for downstream use in R data frames. In the next two class weeks, we’ll be loading these file formats from the web, using web scraping and web APIs.
+
+Select three books on a single subject of your choice. At least one book must have multiple authors. For each book, record the title, authors, and two to three additional attributes of your choosing (e.g., publication year, publisher, ISBN, genre, rating).
+
+Using this information, manually create two data files:
+
+An HTML file containing a table with the book data (e.g., books.html)
+
+A JSON file representing the same data (e.g., books.json)
+
+Unless you are already very comfortable with these formats, you are expected to create both files by hand to better understand their structure.
+
+Next, write R code (using packages of your choice) to:
+
+Load the HTML data into an R data frame
+
+Load the JSON data into a separate R data frame
+
+Compare the two data frames and determine whether they are identical
+
+Deliverables books.html
+
+books.json
+
+R code that loads and compares both data sources
+
+Package your complete solution in a Quarto (.qmd) file and publish it to rpubs.com.
+
+Note: Publishing will require making your HTML and JSON files publicly accessible on the web.
+
+## The three books
+
+The following is the information for the three books for this assignment:
+
+1.  Title - The Feast of the Goat (La fiesta del Chivo)
+
+    Author - Mario Vargas Llosa
+
+    Publisher - Alfaguara
+
+    Publication Year - 2000
+
+    ISBN - 978-950-511-584-6
+
+2.  Title - Harry Potter and the Prisoner of Azkaban
+
+    Author - J. K. Rowling
+
+    Publisher - Bloomsbury Publishing
+
+    Publication Year - 1999
+
+    ISBN - 978-0747542155
+
+3.  Title - This Is How You Lose the Time War
+
+    Author - Amal El-Mohtar, Max Gladstone
+
+    Publisher - Saga Press
+
+    Publication Year - 2019
+
+    ISBN - 978-1534431003
+
+## Creating the JSON file from scratch
+
+The following [tutorial](https://medium.com/@onlinejsonformatter/how-to-create-a-json-file-a-complete-beginners-guide-75db28d2ffde) was used to generate the JSON file.
+
+## Creating the HTML file from scratch
+
+The following [tutorial](https://www.w3schools.com/html/html_basic.asp) was used to generate the HTML file.
+
+## Loading the JSON file into R
+
+The rjson package is a legacy package designed to specifically to work with .json files.
+
+```{r Chunk1}
+#| echo: false
+#| 
+library(tidyverse)
+library(rjson)
+library(rvest)
+```
+
+You can add options to executable code like this
+
+```{r Chunk2}
+#| echo: true
+
+my_data_json <- fromJSON(file = file.choose())
+
+glimpse(my_data_json)
+```
+
+## Loading the HTML file into R
+
+The rjson package is a legacy package designed to specifically to work with .json files.
+
+```{r Chunk3}
+#| echo: true
+
+my_html_data <- read_html(file.choose())
+```
+
+```{r Chunk4}
+#| echo: true
+
+cat(as.character(my_html_data))
+```
+
+## Conclusion.
+
+The assignment was completed succesfully. The .json file imported as nested lists whereas the html file is interpreted as a plain text. I would need to explore more whether HTML natively allows the construction of nested lists the same way .json does. My initial impression is .json files will be easier to work with within R.
