@@ -1,0 +1,327 @@
+---
+title: "DATA 607 Project 1 - Marcin K"
+format: html
+editor: visual
+---
+
+## Introduction - Project 1
+
+In this project, I'm working with a text document (tournamentinfo.txt) that has some structure with chess tournament. The output of the assignment will be an Quarto R Markdown file that generates a .CSV file with the following information for all of the players:
+
+Player’s Name, Player’s State, Total Number of Points, Player’s Pre-Rating, and Average Pre Chess Rating of Opponents.
+
+For the first player, the information would be: Gary Hua, ON, 6.0, 1794, 1605
+
+The chess rating system (invented by a Minnesota statistician named Arpad Elo) has been used in many other contexts, including assessing relative strength of employment candidates by human resource departments.
+
+The Quarto R markdown file will be published to Rpubs and Github with all supporting files included.
+
+## Part 1 - Importing the Text Document
+
+There are a few options to try and import the data, including read_tsv(), read_delim(), and read_table()
+
+Source: R for Data Science (2e) Chapter 7
+
+```{r intro}
+#| echo: true
+library(tidyverse)
+```
+
+```{r chunk1}
+#| echo: true
+
+#Use the read_lines() function to read the .txt file
+lines <- read_lines(file.choose())
+
+#Manually verified in a text editor the original file has 196 lines, there is a repeating pattern for hyphens at lines 1, 4, 7, and so on. I want to skip loading all of the hyphens. I'll generate a skip index to pass over all of the hyphenated information.  
+idx_hyphens <- seq(from = 1, to = 196, by = 3)
+
+#The original data essentially has two headers stacked one on top of the other. The data that correspond to the first header at separated by a pattern of skipping three lines and the data for the second header are separated by the same pattern of skipping three lines. 
+idx_data1 <- seq(from = 2, to = 194, by = 3)
+idx_data2 <- seq(from = 3, to = 195, by = 3)
+
+#Here we are going to generate two dataframes based on header 1 and header 2 of from the indexes above, and then combine the two dataframes later into one comprehensive dataframe. Read_table() is designed to take a single string input whereas read_lines() stores the text file as a vector of multiple strings. By using the paste() function the multiple strings are passed to read_table() as a single text block separated by newline characters using the collapse argument. 
+lines_1 <- lines[idx_data1]
+
+
+df_1 <- read_delim(
+  paste(lines_1, collapse = "\n"),
+  delim = "|",
+  trim_ws = TRUE,
+  col_names = TRUE,
+  )
+
+#read_table was less effective than the read_delim() function.
+#Left the read table() approach intact to show the original approach. 
+
+lines_2 <- lines[idx_data2]
+df_2 <- read_table(
+  paste(lines_2, collapse = "\n"),
+  col_names = TRUE,
+  )
+
+
+
+```
+
+```{r Chunk2}
+#| echo: true
+
+#Below is the dataframe tidying for df_1
+
+colnames(df_1)[4] <- "Rnd1"
+colnames(df_1)[5] <- "Rnd2"
+colnames(df_1)[6] <- "Rnd3"
+colnames(df_1)[7] <- "Rnd4"
+colnames(df_1)[8] <- "Rnd5"
+colnames(df_1)[9] <- "Rnd6"
+colnames(df_1)[10] <- "Rnd7"
+df_1 <- df_1[, -11] #delete final column as it contains Null values only
+
+df_1$Rnd1_Num <- NA
+df_1$Rnd2_Num <- NA
+df_1$Rnd3_Num <- NA
+df_1$Rnd4_Num <- NA
+df_1$Rnd5_Num <- NA
+df_1$Rnd6_Num <- NA
+df_1$Rnd7_Num <- NA
+
+# print(df_1, n=64)
+
+df_1$Rnd1_Num <- df_1$Rnd1 %>%
+  str_extract("\\d{1,2}")
+df_1$Rnd2_Num <- df_1$Rnd2 %>%
+  str_extract("\\d{1,2}")
+df_1$Rnd3_Num <- df_1$Rnd3 %>%
+  str_extract("\\d{1,2}")
+df_1$Rnd4_Num <- df_1$Rnd4 %>%
+  str_extract("\\d{1,2}")
+df_1$Rnd5_Num <- df_1$Rnd5 %>%
+  str_extract("\\d{1,2}")
+df_1$Rnd6_Num <- df_1$Rnd6 %>%
+  str_extract("\\d{1,2}")
+df_1$Rnd7_Num <- df_1$Rnd7 %>%
+  str_extract("\\d{1,2}")
+
+#Cleaning up the original Round columns
+
+df_1$Rnd1 <- df_1$Rnd1 %>%
+  str_extract("[A-Z]")
+df_1$Rnd2 <- df_1$Rnd2 %>%
+  str_extract("[A-Z]")
+df_1$Rnd3 <- df_1$Rnd3 %>%
+  str_extract("[A-Z]")
+df_1$Rnd4 <- df_1$Rnd4 %>%
+  str_extract("[A-Z]")
+df_1$Rnd5 <- df_1$Rnd5 %>%
+  str_extract("[A-Z]")
+df_1$Rnd6 <- df_1$Rnd6 %>%
+  str_extract("[A-Z]")
+df_1$Rnd7 <- df_1$Rnd7 %>%
+  str_extract("[A-Z]")
+
+```
+
+```{r Chunk3}
+#| echo: true
+
+#Before combining the dataframes, I would like to start off and delete unnecessary columns and simultaneously rename the existing column headers, some of which loaded as desired and some of which did not. 
+
+#Here is df_2
+
+colnames(df_2)[3] <- "USCF ID"
+colnames(df_2)[6] <- "Pre_Rnk"
+colnames(df_2)[7] <- "Pst_Rnk"
+colnames(df_2)[8] <- "Pts"
+colnames(df_2)[9] <- "Rnd1_Res"
+colnames(df_2)[10] <- "Rnd2_Res"
+colnames(df_2)[11] <- "Rnd3_Res"
+colnames(df_2)[12] <- "Rnd4_Res"
+colnames(df_2)[13] <- "Rnd5_Res"
+colnames(df_2)[14] <- "Rnd6_Res"
+colnames(df_2)[15] <- "Rnd7_Res"
+colnames(df_2)[16] <- "Pre_Rnk_P_Val"   #This was added from a later section during code clean up
+colnames(df_2)[17] <- "Pst_Rnk_P_Val"  #This was added from a later section during code clean up
+
+df_2 <- df_2[, -c(2,4,5,18,19,20,21,22,23,24,25)] # column with nothing but `|`, column with nothing but `/`, column with nothing but `R:`, columns 18 thru 25 filled with null data
+
+```
+
+```{r Chunk4}
+#| echo: true
+
+#Using the print() function (print(df_2, n = 64)) we can see that there are data errors because the formatting in lines 8, 15, 21, 29, 37, 39, 41, 46, 49, 58, 59, 60 are different from the remainder of the rows in the function. There appear to be three distinct formatting issues. In lines 29, 41, and 46, there is an additional 'Pxx' suffix after the ranking where xx indicates a numerical value. In lines 8, 15, 21, 37, 39, and 49, the data is formatted as xxxxPxx->xxxxPxx in Column 3, and all of the data in subsequent columns is shifted over on column to the left. Ex. Data that should be in column 5 is in Column 4, data that is in column 6 is in column 5, and so on. Finally, rows 58,59, 60 need to be shifted on to the left because teh data is skewed too far over to the right by one column. 
+
+#The first step will be to shift all of the data one column to the right in lines 8, 15, 21, 37, 39, and 49 starting from column 3. I am going to pass the specified rows to a vector called 'row', then use indexing to shift the data one position to the right and populate the empty column 3 with 'NA' in those rows. 
+
+rows <- c(8, 15, 21, 37, 39, 49)
+df_2[rows, 4:12] <- df_2[rows, 3:11]
+
+rows2 <- c(58, 59, 60)
+df_2[rows2, 4:12] <- df_2[rows2, 5:13]
+
+```
+
+```{r Chunk5}
+#| echo: true
+
+#For the third column, we can treat the Pre Ranking column the same way for lines 8, 15, 21, 29, 37, 39, 41, 46, 49, 61. The next step will be to reset the row vector. 
+
+rows <- c(8, 15, 21, 29, 37, 39, 41, 46, 49, 61)
+
+#The next step will be to extract the P value from the string and place it into a separate column. The string extract function matches the first pattern Pxx (in which x is a number) and writes it to a new column.
+
+df_2$Pre_Rnk_P_Val[rows] <- df_2$Pre_Rnk[rows] %>%
+  str_extract("P\\d{1,2}") #this will find the first P value
+
+#Now I can override column 3 with data with the ranking value, which can be either 3 or 4 digits. 
+df_2$Pre_Rnk[rows] <- df_2$Pre_Rnk[rows] %>%
+  str_extract("^\\d{3,4}")
+
+#Extract the P value from the string and place it into a separate column.
+df_2$Pst_Rnk_P_Val[rows] <- df_2$Pst_Rnk[rows] %>%
+  str_extract("P\\d{1,2}$")
+
+#Now for lines lines 8, 15, 21, 37, 41, and 49 I'll remove anything before the '->' characters. Using lookbehind I'll remove the '->' from the characters. Lookbehind: (?<=->)
+
+rows <- c(8, 15, 21, 29, 37, 39, 41, 46, 49)
+
+df_2$Pst_Rnk[rows] <- df_2$Pst_Rnk[rows] %>%
+  str_extract("(?<=->).{1,8}")
+
+df_2$Pst_Rnk[rows] <- df_2$Pst_Rnk[rows] %>%
+  str_extract("^\\d{3,4}")
+
+# print(df_2, n = 64)
+
+```
+
+```{r Chunk6}
+#| echo: true
+
+#Let's continue tidying
+
+df_2$Pst_Rnk <- df_2$Pst_Rnk %>%
+  str_extract("\\d{3,4}")
+
+df_2$Pts <- df_2$Pts %>%
+  str_extract("\\d")
+
+df_2$Rnd1_Res <- df_2$Rnd1_Res %>%
+  str_extract("\\w+")
+
+df_2$Rnd2_Res <- df_2$Rnd2_Res %>%
+  str_extract("\\w+")
+
+df_2$Rnd3_Res <- df_2$Rnd3_Res %>%
+  str_extract("\\w+")
+
+df_2$Rnd4_Res <- df_2$Rnd4_Res %>%
+  str_extract("\\w+")
+
+df_2$Rnd5_Res <- df_2$Rnd5_Res %>%
+  str_extract("\\w+")
+
+df_2$Rnd6_Res <- df_2$Rnd6_Res %>%
+  str_extract("\\w+")
+
+df_2$Rnd7_Res <- df_2$Rnd7_Res %>%
+  str_extract("\\w+")
+
+df_2$Pre_Rnk_P_Val <- df_2$Pre_Rnk_P_Val %>%
+  str_extract("\\w{2,3}")
+
+df_2$Pst_Rnk_P_Val <- df_2$Pst_Rnk_P_Val %>%
+  str_extract("\\w{2,3}")
+
+# print(df_2, n = 64)
+
+```
+
+```{r Chunk7}
+#| echo: true
+
+#Both dataframes 1 and 2 have been made tidy and it is time to merge them.
+
+Chess_Data = cbind(df_1, df_2)
+
+Chess_Data_CSV <- Chess_Data %>%
+  select(`Player Name`, Num, Total, Pre_Rnk)
+
+#glimpse(Chess_Data)
+
+# write_csv(Chess_Data_CSV, file = "chess_data.csv")
+
+```
+
+```{r Chunk8}
+#| echo: true
+
+#In this chunk I will work out finding pre-match opponent average ranking. 
+
+pre_Opp_Avg <- numeric(nrow(Chess_Data))
+
+#Some of the columns in Chess_Data need to be converted from character to numeric data types. 
+
+Chess_Data <- Chess_Data %>%
+  mutate(across(c(Pre_Rnk, Rnd1_Num, Rnd2_Num , Rnd3_Num, Rnd4_Num, Rnd5_Num, Rnd6_Num, Rnd7_Num), as.numeric))
+
+for (n in 1:nrow(Chess_Data)) {
+  
+  #Reading the opponent's pair number.
+  x1 <- Chess_Data$Rnd1_Num[n]
+  x2 <- Chess_Data$Rnd2_Num[n]
+  x3 <- Chess_Data$Rnd3_Num[n]
+  x4 <- Chess_Data$Rnd4_Num[n]
+  x5 <- Chess_Data$Rnd5_Num[n]
+  x6 <- Chess_Data$Rnd6_Num[n]
+  x7 <- Chess_Data$Rnd7_Num[n]
+  
+  #Use their pair number to find their ranking. Essentially a VLOOKUP. 
+  v1 <- Chess_Data$Pre_Rnk[x1]
+  v2 <- Chess_Data$Pre_Rnk[x2]
+  v3 <- Chess_Data$Pre_Rnk[x3]
+  v4 <- Chess_Data$Pre_Rnk[x4]
+  v5 <- Chess_Data$Pre_Rnk[x5]
+  v6 <- Chess_Data$Pre_Rnk[x6]
+  v7 <- Chess_Data$Pre_Rnk[x7]
+  
+  #Combine opponents rankings into a vector. 
+  opp_ratings <- c(v1, v2, v3, v4, v5, v6, v7)
+  
+  #Use the na.omit() function to drop unplayed matches (NA values). 
+  clean_ratings <- na.omit(opp_ratings)
+  
+  # Calculate average opponent group ranking and round to the nearest whole number. 
+  pre_Opp_Avg[n] <- round(sum(clean_ratings) / length(clean_ratings))
+}
+
+Chess_Data_CSV$Avg_Opp_Rating <- pre_Opp_Avg
+
+
+```
+
+```{r Chunk9}
+#| echo: true
+
+#Let's Export to CSV
+
+write_csv(Chess_Data_CSV, "DATA_607_Project_1_Marcin_K.csv")
+
+```
+
+## Conclusion
+
+This exercise was a great test of my data tidying skills.
+
+One of my key takeaways is the importance of carefully evaluating data import options before diving into wrangling. When I initially used read_table() on df_2, the output seemed "good enough"—not imported particularly well, but workable enough to manage the tidying process. However, after using read_delim() on df_1, I realized it would have provided a much cleaner, more consistent approach for both datasets. Moving forward, I will test multiple import functions up front to identify the best fit for the raw data structure before writing downstream code.
+
+Looking ahead, I also see opportunities to refactor the code by leveraging additional tidyverse pipelines and consolidating the current multi-chunk workflow into a more streamlined, cohesive final script.
+
+##Citations
+
+1. Wickham, H., Çetinkaya-Rundel, M., & Grolemund, G. (2023). R for data science: Import, tidy, transform, visualize, and model data (2nd ed.). O'Reilly Media
+
+2. Google. Gemini Flash. Version 3.8, Google, 2026, https://gemini.google.com. Accessed 29 Oct. 2026.
+
+AI Disclosure: Gemini Flash (Version 3.8; Google, 2026) was utilized during this assignment as an assistive tool for code troubleshooting, syntax consultation, and reference checking. All code execution, data interpretations, and final submissions were reviewed and verified by the author.
